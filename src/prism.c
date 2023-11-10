@@ -460,6 +460,11 @@ pm_parser_err(pm_parser_t *parser, const uint8_t *start, const uint8_t *end, pm_
 }
 
 /**
+ * Append an error to the list of errors on the parser using a format string.
+ */
+#define PM_PARSER_ERR_FORMAT(parser, start, end, diag_id, ...) pm_diagnostic_list_append_format(&parser->error_list, start, end, diag_id, __VA_ARGS__)
+
+/**
  * Append an error to the list of errors on the parser using the location of the
  * current token.
  */
@@ -469,12 +474,10 @@ pm_parser_err_current(pm_parser_t *parser, pm_diagnostic_id_t diag_id) {
 }
 
 /**
- * Append an error to the list of errors on the parser using the given location.
+ * Append an error to the list of errors on the parser using the given location
+ * using a format string.
  */
-static inline void
-pm_parser_err_location(pm_parser_t *parser, const pm_location_t *location, pm_diagnostic_id_t diag_id) {
-    pm_parser_err(parser, location->start, location->end, diag_id);
-}
+#define PM_PARSER_ERR_LOCATION_FORMAT(parser, location, diag_id, ...) pm_diagnostic_list_append_format(&parser->error_list, (location)->start, (location)->end, diag_id, __VA_ARGS__)
 
 /**
  * Append an error to the list of errors on the parser using the location of the
@@ -484,6 +487,12 @@ static inline void
 pm_parser_err_node(pm_parser_t *parser, const pm_node_t *node, pm_diagnostic_id_t diag_id) {
     pm_parser_err(parser, node->location.start, node->location.end, diag_id);
 }
+
+/**
+ * Append an error to the list of errors on the parser using the location of the
+ * given node and a format string.
+ */
+#define PM_PARSER_ERR_NODE_FORMAT(parser, node, diag_id, ...) pm_diagnostic_list_append_format(&parser->error_list, node->location.start, node->location.end, diag_id, __VA_ARGS__)
 
 /**
  * Append an error to the list of errors on the parser using the location of the
@@ -502,6 +511,12 @@ static inline void
 pm_parser_err_token(pm_parser_t *parser, const pm_token_t *token, pm_diagnostic_id_t diag_id) {
     pm_parser_err(parser, token->start, token->end, diag_id);
 }
+
+/**
+ * Append an error to the list of errors on the parser using the location of the
+ * given token and a format string.
+ */
+#define PM_PARSER_ERR_TOKEN_FORMAT(parser, token, diag_id, ...) pm_diagnostic_list_append_format(&parser->error_list, token->start, token->end, diag_id, __VA_ARGS__)
 
 /**
  * Append a warning to the list of warnings on the parser.
@@ -3884,7 +3899,7 @@ pm_local_variable_target_node_create(pm_parser_t *parser, const pm_token_t *name
     pm_local_variable_target_node_t *node = PM_ALLOC_NODE(parser, pm_local_variable_target_node_t);
 
     if (token_is_numbered_parameter(name->start, name->end)) {
-        pm_parser_err_token(parser, name, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+        PM_PARSER_ERR_TOKEN_FORMAT(parser, name, PM_ERR_PARAMETER_NUMBERED_RESERVED, name->start);
     }
 
     *node = (pm_local_variable_target_node_t) {
@@ -5615,7 +5630,7 @@ pm_parser_parameter_name_check(pm_parser_t *parser, const pm_token_t *name) {
     // We want to check whether the parameter name is a numbered parameter or
     // not.
     if (token_is_numbered_parameter(name->start, name->end)) {
-        pm_parser_err_token(parser, name, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+        PM_PARSER_ERR_TOKEN_FORMAT(parser, name, PM_ERR_PARAMETER_NUMBERED_RESERVED, name->start);
     }
 
     // We want to ignore any parameter name that starts with an underscore.
@@ -10180,7 +10195,7 @@ parse_target(pm_parser_t *parser, pm_node_t *target) {
             return target;
         case PM_LOCAL_VARIABLE_READ_NODE:
             if (token_is_numbered_parameter(target->location.start, target->location.end)) {
-                pm_parser_err_node(parser, target, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+                PM_PARSER_ERR_NODE_FORMAT(parser, target, PM_ERR_PARAMETER_NUMBERED_RESERVED, target->location.start);
             } else {
                 assert(sizeof(pm_local_variable_target_node_t) == sizeof(pm_local_variable_read_node_t));
                 target->type = PM_LOCAL_VARIABLE_TARGET_NODE;
@@ -10239,7 +10254,7 @@ parse_target(pm_parser_t *parser, pm_node_t *target) {
                     target->type = PM_LOCAL_VARIABLE_TARGET_NODE;
 
                     if (token_is_numbered_parameter(message.start, message.end)) {
-                        pm_parser_err_location(parser, &message, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+                        PM_PARSER_ERR_LOCATION_FORMAT(parser, &message, PM_ERR_PARAMETER_NUMBERED_RESERVED, message.start);
                     }
 
                     return target;
@@ -10323,7 +10338,7 @@ parse_write(pm_parser_t *parser, pm_node_t *target, pm_token_t *operator, pm_nod
         }
         case PM_LOCAL_VARIABLE_READ_NODE: {
             if (token_is_numbered_parameter(target->location.start, target->location.end)) {
-                pm_parser_err_node(parser, target, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+                PM_PARSER_ERR_NODE_FORMAT(parser, target, PM_ERR_PARAMETER_NUMBERED_RESERVED, target->location.start);
             }
 
             pm_local_variable_read_node_t *local_read = (pm_local_variable_read_node_t *) target;
@@ -10388,7 +10403,7 @@ parse_write(pm_parser_t *parser, pm_node_t *target, pm_token_t *operator, pm_nod
                     target = (pm_node_t *) pm_local_variable_write_node_create(parser, constant_id, 0, value, &message, operator);
 
                     if (token_is_numbered_parameter(message.start, message.end)) {
-                        pm_parser_err_location(parser, &message, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+                        PM_PARSER_ERR_LOCATION_FORMAT(parser, &message, PM_ERR_PARAMETER_NUMBERED_RESERVED, message.start);
                     }
 
                     return target;
@@ -15379,7 +15394,7 @@ parse_regular_expression_named_captures(pm_parser_t *parser, const pm_string_t *
                 local = pm_parser_local_add_location(parser, source, source + length);
 
                 if (token_is_numbered_parameter(source, source + length)) {
-                    pm_parser_err(parser, source, source + length, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+                    PM_PARSER_ERR_FORMAT(parser, source, source + length, PM_ERR_PARAMETER_NUMBERED_RESERVED, source);
                 }
             } else {
                 // Otherwise, the name is a slice of the malloc-ed owned string,
@@ -15392,7 +15407,7 @@ parse_regular_expression_named_captures(pm_parser_t *parser, const pm_string_t *
 
                 if (token_is_numbered_parameter(source, source + length)) {
                     const pm_location_t *location = &call->receiver->location;
-                    pm_parser_err_location(parser, location, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+                    PM_PARSER_ERR_LOCATION_FORMAT(parser, location, PM_ERR_PARAMETER_NUMBERED_RESERVED, location->start);
                 }
             }
 
@@ -15515,11 +15530,11 @@ parse_expression_infix(pm_parser_t *parser, pm_node_t *node, pm_binding_power_t 
                     // receiver that could have been a local variable) then we
                     // will transform it into a local variable write.
                     if (pm_call_node_variable_call_p(cast)) {
-                        pm_location_t message_loc = cast->message_loc;
-                        pm_constant_id_t constant_id = pm_parser_local_add_location(parser, message_loc.start, message_loc.end);
+                        pm_location_t *message_loc = &cast->message_loc;
+                        pm_constant_id_t constant_id = pm_parser_local_add_location(parser, message_loc->start, message_loc->end);
 
-                        if (token_is_numbered_parameter(message_loc.start, message_loc.end)) {
-                            pm_parser_err_location(parser, &message_loc, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+                        if (token_is_numbered_parameter(message_loc->start, message_loc->end)) {
+                            PM_PARSER_ERR_LOCATION_FORMAT(parser, message_loc, PM_ERR_PARAMETER_NUMBERED_RESERVED, message_loc->end);
                         }
 
                         pm_node_t *value = parse_expression(parser, binding_power, PM_ERR_EXPECT_EXPRESSION_AFTER_AMPAMPEQ);
@@ -15629,11 +15644,11 @@ parse_expression_infix(pm_parser_t *parser, pm_node_t *node, pm_binding_power_t 
                     // receiver that could have been a local variable) then we
                     // will transform it into a local variable write.
                     if (pm_call_node_variable_call_p(cast)) {
-                        pm_location_t message_loc = cast->message_loc;
-                        pm_constant_id_t constant_id = pm_parser_local_add_location(parser, message_loc.start, message_loc.end);
+                        pm_location_t *message_loc = &cast->message_loc;
+                        pm_constant_id_t constant_id = pm_parser_local_add_location(parser, message_loc->start, message_loc->end);
 
-                        if (token_is_numbered_parameter(message_loc.start, message_loc.end)) {
-                            pm_parser_err_location(parser, &message_loc, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+                        if (token_is_numbered_parameter(message_loc->start, message_loc->end)) {
+                            PM_PARSER_ERR_LOCATION_FORMAT(parser, message_loc, PM_ERR_PARAMETER_NUMBERED_RESERVED, message_loc->start);
                         }
 
                         pm_node_t *value = parse_expression(parser, binding_power, PM_ERR_EXPECT_EXPRESSION_AFTER_PIPEPIPEEQ);
@@ -15753,11 +15768,11 @@ parse_expression_infix(pm_parser_t *parser, pm_node_t *node, pm_binding_power_t 
                     // receiver that could have been a local variable) then we
                     // will transform it into a local variable write.
                     if (pm_call_node_variable_call_p(cast)) {
-                        pm_location_t message_loc = cast->message_loc;
-                        pm_constant_id_t constant_id = pm_parser_local_add_location(parser, message_loc.start, message_loc.end);
+                        pm_location_t *message_loc = &cast->message_loc;
+                        pm_constant_id_t constant_id = pm_parser_local_add_location(parser, message_loc->start, message_loc->end);
 
-                        if (token_is_numbered_parameter(message_loc.start, message_loc.end)) {
-                            pm_parser_err_location(parser, &message_loc, PM_ERR_PARAMETER_NUMBERED_RESERVED);
+                        if (token_is_numbered_parameter(message_loc->start, message_loc->end)) {
+                            PM_PARSER_ERR_LOCATION_FORMAT(parser, message_loc, PM_ERR_PARAMETER_NUMBERED_RESERVED, message_loc->start);
                         }
 
                         pm_node_t *value = parse_expression(parser, binding_power, PM_ERR_EXPECT_EXPRESSION_AFTER_OPERATOR);
