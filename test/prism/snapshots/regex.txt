@@ -1,8 +1,8 @@
-@ ProgramNode (location: (1,0)-(33,14))
-├── locals: [:foo, :ab]
+@ ProgramNode (location: (1,0)-(36,24))
+├── locals: [:foo, :ab, :a]
 └── statements:
-    @ StatementsNode (location: (1,0)-(33,14))
-    └── body: (length: 16)
+    @ StatementsNode (location: (1,0)-(36,24))
+    └── body: (length: 18)
         ├── @ CallNode (location: (1,0)-(1,9))
         │   ├── receiver: ∅
         │   ├── call_operator_loc: ∅
@@ -116,7 +116,10 @@
         │   │   │   │   ├── block: ∅
         │   │   │   │   ├── flags: ∅
         │   │   │   │   └── name: :=~
-        │   │   │   └── locals: [:foo]
+        │   │   │   └── targets: (length: 1)
+        │   │   │       └── @ LocalVariableTargetNode (location: (11,5)-(11,8))
+        │   │   │           ├── name: :foo
+        │   │   │           └── depth: 0
         │   │   └── @ LocalVariableReadNode (location: (11,23)-(11,26))
         │   │       ├── name: :foo
         │   │       └── depth: 0
@@ -237,7 +240,71 @@
         │   │   ├── block: ∅
         │   │   ├── flags: ∅
         │   │   └── name: :=~
-        │   └── locals: [:ab]
-        └── @ LocalVariableReadNode (location: (33,12)-(33,14))
-            ├── name: :ab
-            └── depth: 0
+        │   └── targets: (length: 1)
+        │       └── @ LocalVariableTargetNode (location: (32,0)-(33,4))
+        │           ├── name: :ab
+        │           └── depth: 0
+        ├── @ LocalVariableReadNode (location: (33,12)-(33,14))
+        │   ├── name: :ab
+        │   └── depth: 0
+        ├── @ LocalVariableWriteNode (location: (35,0)-(35,5))
+        │   ├── name: :a
+        │   ├── depth: 0
+        │   ├── name_loc: (35,0)-(35,1) = "a"
+        │   ├── value:
+        │   │   @ IntegerNode (location: (35,4)-(35,5))
+        │   │   └── flags: decimal
+        │   └── operator_loc: (35,2)-(35,3) = "="
+        └── @ CallNode (location: (36,0)-(36,24))
+            ├── receiver: ∅
+            ├── call_operator_loc: ∅
+            ├── message_loc: (36,0)-(36,3) = "tap"
+            ├── opening_loc: ∅
+            ├── arguments: ∅
+            ├── closing_loc: ∅
+            ├── block:
+            │   @ BlockNode (location: (36,4)-(36,24))
+            │   ├── locals: []
+            │   ├── parameters: ∅
+            │   ├── body:
+            │   │   @ StatementsNode (location: (36,6)-(36,22))
+            │   │   └── body: (length: 1)
+            │   │       └── @ MatchWriteNode (location: (36,6)-(36,22))
+            │   │           ├── call:
+            │   │           │   @ CallNode (location: (36,6)-(36,22))
+            │   │           │   ├── receiver:
+            │   │           │   │   @ RegularExpressionNode (location: (36,6)-(36,14))
+            │   │           │   │   ├── opening_loc: (36,6)-(36,7) = "/"
+            │   │           │   │   ├── content_loc: (36,7)-(36,13) = "(?<a>)"
+            │   │           │   │   ├── closing_loc: (36,13)-(36,14) = "/"
+            │   │           │   │   ├── unescaped: "(?<a>)"
+            │   │           │   │   └── flags: ∅
+            │   │           │   ├── call_operator_loc: ∅
+            │   │           │   ├── message_loc: (36,15)-(36,17) = "=~"
+            │   │           │   ├── opening_loc: ∅
+            │   │           │   ├── arguments:
+            │   │           │   │   @ ArgumentsNode (location: (36,18)-(36,22))
+            │   │           │   │   ├── arguments: (length: 1)
+            │   │           │   │   │   └── @ CallNode (location: (36,18)-(36,22))
+            │   │           │   │   │       ├── receiver: ∅
+            │   │           │   │   │       ├── call_operator_loc: ∅
+            │   │           │   │   │       ├── message_loc: (36,18)-(36,22) = "to_s"
+            │   │           │   │   │       ├── opening_loc: ∅
+            │   │           │   │   │       ├── arguments: ∅
+            │   │           │   │   │       ├── closing_loc: ∅
+            │   │           │   │   │       ├── block: ∅
+            │   │           │   │   │       ├── flags: variable_call
+            │   │           │   │   │       └── name: :to_s
+            │   │           │   │   └── flags: ∅
+            │   │           │   ├── closing_loc: ∅
+            │   │           │   ├── block: ∅
+            │   │           │   ├── flags: ∅
+            │   │           │   └── name: :=~
+            │   │           └── targets: (length: 1)
+            │   │               └── @ LocalVariableTargetNode (location: (36,10)-(36,11))
+            │   │                   ├── name: :a
+            │   │                   └── depth: 1
+            │   ├── opening_loc: (36,4)-(36,5) = "{"
+            │   └── closing_loc: (36,23)-(36,24) = "}"
+            ├── flags: ∅
+            └── name: :tap
