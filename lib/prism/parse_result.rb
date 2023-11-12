@@ -21,44 +21,87 @@ module Prism
       @source = source
       @start_line = start_line
       @offsets = offsets
+      @character_offsets = nil
     end
 
     # Perform a byteslice on the source code using the given byte offset and
     # byte length.
-    def slice(offset, length)
-      source.byteslice(offset, length)
+    def slice(byte_offset, length)
+      source.byteslice(byte_offset, length)
     end
 
     # Binary search through the offsets to find the line number for the given
     # byte offset.
-    def line(value)
-      start_line + find_line(value)
+    def line(byte_offset)
+      start_line + find_line(byte_offset)
     end
 
     # Return the byte offset of the start of the line corresponding to the given
     # byte offset.
-    def line_offset(value)
-      offsets[find_line(value)]
+    def line_start(byte_offset)
+      offsets[find_line(byte_offset)]
     end
 
     # Return the column number for the given byte offset.
-    def column(value)
-      value - offsets[find_line(value)]
+    def column(byte_offset)
+      byte_offset - line_start(byte_offset)
+    end
+
+    # Return the character offset for the given byte offset.
+    def character(byte_offset)
+      character_offsets[byte_offset] ||= find_character_offset(byte_offset)
+    end
+
+    # Return the column number in characters for the given byte offset.
+    def character_column(byte_offset)
+      character(byte_offset) - character(line_start(byte_offset))
     end
 
     private
 
+    # A lazily-computed cache of byte offset => character offset mappings.
+    def character_offsets
+      @character_offsets ||= { 0 => 0 }
+    end
+
+    # Find the character offset for the given byte offset.
+    def find_character_offset(byte_offset)
+      line_index = find_line(byte_offset)
+
+      # First, look backward down the list of newlines and find the first one we
+      # have already computed a character offset for. Worst case, this will
+      # always find the first newline in the file since we initialized the
+      # character_offsets hash with it.
+      starting = line_index.downto(0).find { |index| character_offsets.key?(offsets[index]) }
+      previous = character_offsets[offsets[starting]]
+
+      # Now, iterate forward from the last line we found a character offset for
+      # and compute the character offset for each line until we reach the line
+      # we are looking for.
+      ((starting + 1)..line_index).each do |index|
+        previous = character_offsets[offsets[index]] =
+          previous + source.byteslice(offsets[index - 1], offsets[index]).length
+      end
+
+      # Finally, compute the character offset for the given byte offset by
+      # adding the character offset for the start of the line and then computing
+      # the character length of the slice from the start of the line to the
+      # given byte offset.
+      line_offset = offsets[line_index]
+      previous + source.byteslice(line_offset, byte_offset - line_offset).length
+    end
+
     # Binary search through the offsets to find the line number for the given
     # byte offset.
-    def find_line(value)
+    def find_line(byte_offset)
       left = 0
       right = offsets.length - 1
 
       while left <= right
         mid = left + (right - left) / 2
-        return mid if offsets[mid] == value
+        return mid if offsets[mid] == byte_offset
 
-        if offsets[mid] < value
+        if offsets[mid] < byte_offset
           left = mid + 1
         else
           right = mid - 1
@@ -121,9 +164,21 @@ module Prism
       source.slice(start_offset, length)
     end
 
+    # The character offset from the beginning of the source where this location
+    # starts.
+    def start_character_offset
+      source.character(start_offset)
+    end
+
     # The byte offset from the beginning of the source where this location ends.
     def end_offset
       start_offset + length
+    end
+
+    # The character offset from the beginning of the source where this location
+    # ends.
+    def end_character_offset
+      source.character(end_offset)
     end
 
     # The line number where this location starts.
@@ -133,7 +188,7 @@ module Prism
 
     # The content of the line where this location starts before this location.
     def start_line_slice
-      offset = source.line_offset(start_offset)
+      offset = source.line_start(start_offset)
       source.slice(offset, start_offset - offset)
     end
 
@@ -148,10 +203,22 @@ module Prism
       source.column(start_offset)
     end
 
+    # The column number in characters where this location ends from the start of
+    # the line.
+    def start_character_column
+      source.character_column(start_offset)
+    end
+
     # The column number in bytes where this location ends from the start of the
     # line.
     def end_column
       source.column(end_offset)
+    end
+
+    # The column number in characters where this location ends from the start of
+    # the line.
+    def end_character_column
+      source.character_column(end_offset)
     end
 
     # Implement the hash pattern matching interface for Location.
